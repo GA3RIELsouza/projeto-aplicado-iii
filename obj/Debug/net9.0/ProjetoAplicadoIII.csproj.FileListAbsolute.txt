@@ -53,6 +53,7 @@ C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\n
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\ProjetoAplicadoIII.AssemblyInfo.cs
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\ProjetoAplicadoIII.csproj.CoreCompileInputs.cache
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\ProjetoAplicadoIII.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\ProjetoAplicadoIII.sourcelink.json
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\Usuário\source\repos\ProjetoAplicadoIII\ProjetoAplicadoIII\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json

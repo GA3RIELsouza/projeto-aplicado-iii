@@ -5,9 +5,9 @@ using ProjetoAplicadoIII.Infrastructure.Interfaces;
 
 namespace ProjetoAplicadoIII.Infrastructure.Repositories
 {
-    public abstract class RepositoryBase<TEntity>(MainDbContext db) : IRepositoryBase<TEntity> where TEntity : Entity
+    public abstract class RepositoryBase<TEntity>(SqliteDbContext db) : IRepositoryBase<TEntity> where TEntity : Entity
     {
-        private protected readonly MainDbContext _db = db;
+        private protected readonly SqliteDbContext _db = db;
         private protected readonly DbSet<TEntity> _set = db.Set<TEntity>();
 
         private bool _disposed = false;

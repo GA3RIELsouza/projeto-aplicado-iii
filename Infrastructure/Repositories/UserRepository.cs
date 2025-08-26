@@ -4,7 +4,7 @@ using ProjetoAplicadoIII.Infrastructure.Interfaces;
 
 namespace ProjetoAplicadoIII.Infrastructure.Repositories
 {
-    public sealed class UserRepository(MainDbContext db) : RepositoryBase<User>(db), IUserRepository
+    public sealed class UserRepository(SqliteDbContext db) : RepositoryBase<User>(db), IUserRepository
     {
     }
 }

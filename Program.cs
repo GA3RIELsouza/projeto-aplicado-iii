@@ -11,7 +11,7 @@ builder.Services.AddRazorComponents()
 
 var dbConnStr = builder.Configuration.GetConnectionString("DatabaseConnection");
 
-builder.Services.AddDbContext<MainDbContext>(options =>
+builder.Services.AddDbContext<SqliteDbContext>(options =>
 {
     options.UseSqlite(dbConnStr, sqliteOptions =>
     {

@@ -4,9 +4,9 @@ using ProjetoAplicadoIII.Entities;
 
 namespace ProjetoAplicadoIII.Infrastructure.Context
 {
-    public class MainDbContext : DbContext
+    public class SqliteDbContext : DbContext
     {
-        public MainDbContext(DbContextOptions<MainDbContext> options) : base(options)
+        public SqliteDbContext(DbContextOptions<SqliteDbContext> options) : base(options)
         {
             Database.AutoSavepointsEnabled = false;
             Database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
@@ -15,32 +15,47 @@ namespace ProjetoAplicadoIII.Infrastructure.Context
 
         public DbSet<User> Users => Set<User>();
 
-        public async Task RunInTransactionAsync(Func<Task> operations, Func<Task>? ifFails = null)
+        public async Task RunInTransactionAsync(Func<Task> operations) => await RunInTransactionAsync<bool>(operations, null);
+        public async Task RunInTransactionAsync(Func<Task> operations, Action ifFails) => await RunInTransactionAsync(operations, () => { ifFails(); return Task.CompletedTask; });
+
+        public async Task RunInTransactionAsync<T>(Func<Task> operations, Func<T>? ifFails)
         {
-            if (this.Database.CurrentTransaction is not null)
+            if (Database.CurrentTransaction is not null)
             {
                 await operations();
                 return;
             }
 
-            await this.Database.OpenConnectionAsync();
-            await using var transaction = await this.Database.BeginTransactionAsync();
+            await Database.OpenConnectionAsync();
+            await using var transaction = await Database.BeginTransactionAsync();
 
             try
             {
                 await operations();
-                await this.SaveChangesAsync();
+                await SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                if (ifFails is not null) await ifFails();
+                switch (ifFails)
+                {
+                    case null:
+                        break;
+
+                    case Func<Task> ifFailsTask:
+                        await ifFailsTask();
+                        break;
+
+                    default:
+                        _ = ifFails();
+                        break;
+                }
                 ExceptionDispatchInfo.Capture(ex).Throw();
             }
             finally
             {
-                await this.Database.CloseConnectionAsync();
+                await Database.CloseConnectionAsync();
             }
         }
     }

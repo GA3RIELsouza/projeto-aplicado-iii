@@ -1,47 +1,65 @@
 ﻿#!/bin/bash
 
-set -e  # Para o script em caso de erro
+set -e
 
 PROJECT_PATH="ProjetoAplicadoIII.csproj"
 OUTPUT_DIR="./build-output"
 CONFIGURATION="Release"
-DOTNET_VERSION="8.0"
-INSTALL_DIR="$HOME/.dotnet"
 
 install_dotnet_sdk() {
-  echo "🔧 Instalando .NET SDK $DOTNET_VERSION..."
-  mkdir -p "$INSTALL_DIR"
-  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel "$DOTNET_VERSION" --install-dir "$INSTALL_DIR"
-}
+  echo "🔍 Detectando sistema operacional..."
 
-setup_path() {
-  export PATH="$INSTALL_DIR:$INSTALL_DIR/tools:$PATH"
-}
-
-check_dotnet_sdk() {
-  if ! command -v dotnet > /dev/null 2>&1; then
-    echo "⚠️ .NET SDK não encontrado. Instalando..."
-    install_dotnet_sdk
-    setup_path
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS_NAME=$ID
+    OS_VERSION=$VERSION_ID
+    echo "Sistema detectado: $OS_NAME $OS_VERSION"
   else
-    echo "✅ dotnet já está instalado."
-    setup_path
+    echo "Não foi possível detectar o sistema operacional."
+    exit 1
+  fi
+
+  if [[ "$OS_NAME" == "amzn" || "$OS_NAME" == "centos" ]]; then
+    echo "Instalando .NET SDK 8 via pacote Microsoft para $OS_NAME..."
+
+    sudo yum update -y
+
+    sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+
+    sudo yum install -y dotnet-sdk-8.0
+
+    echo "Instalação do .NET SDK concluída."
+  else
+    echo "Sistema operacional não suportado por esse script automático."
+    exit 1
+  fi
+}
+
+check_dotnet() {
+  if ! command -v dotnet > /dev/null 2>&1; then
+    echo ".NET SDK não encontrado. Instalando..."
+    install_dotnet_sdk
+  else
+    echo "dotnet já está instalado: $(dotnet --version)"
   fi
 }
 
 build_and_publish() {
-  echo "📦 Restaurando pacotes..."
+  echo "Restaurando pacotes..."
   dotnet restore "$PROJECT_PATH"
 
-  echo "🔨 Buildando projeto..."
+  echo "Buildando projeto..."
   dotnet build "$PROJECT_PATH" -c "$CONFIGURATION" --no-restore
 
-  echo "📤 Publicando aplicação..."
+  echo "Publicando aplicação..."
   dotnet publish "$PROJECT_PATH" -c "$CONFIGURATION" -o "$OUTPUT_DIR" --no-build
 
-  echo "✅ Aplicação publicada em: $OUTPUT_DIR"
+  echo "✅ Aplicação publicada em $OUTPUT_DIR"
 }
 
-# Executa as funções
-check_dotnet_sdk
-build_and_publish
+main() {
+  check_dotnet
+  build_and_publish
+}
+
+main

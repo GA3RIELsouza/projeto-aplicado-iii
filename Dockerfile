@@ -19,7 +19,7 @@ WORKDIR /src
 
 # Opcional: permite informar o caminho do .csproj na hora do build
 # Ex.: --build-arg PROJECT=src/MyApp/MyApp.csproj
-ARG PROJECT=./YourProject.csproj
+ARG PROJECT=./ProjetoAplicadoIII.csproj
 ARG BUILD_CONFIGURATION=Release
 
 # Copia tudo (para suportar restauração de projetos com múltiplas pastas)
@@ -37,4 +37,4 @@ FROM runtime AS final
 WORKDIR /app
 COPY --from=build /app/publish ./
 
-ENTRYPOINT ["dotnet", "app.dll"]
+ENTRYPOINT ["dotnet", "ProjetoAplicadoIII.dll"]

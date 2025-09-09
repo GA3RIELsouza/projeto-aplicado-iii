@@ -1,68 +1,47 @@
 ﻿#!/bin/bash
 
-set -e
+set -e  # Para o script em caso de erro
 
-PROJECT_PATH="./deploy"
+PROJECT_PATH="ProjetoAplicadoIII.csproj"
 OUTPUT_DIR="./build-output"
 CONFIGURATION="Release"
-DOTNET_VERSION="8.0.302"  # Versão válida e existente
-INSTALL_DIR="$HOME/dotnet"
+DOTNET_VERSION="8.0"
+INSTALL_DIR="$HOME/.dotnet"
 
-# ------------------------
-# Instala o .NET SDK 8.0 localmente, se necessário
-# ------------------------
 install_dotnet_sdk() {
   echo "🔧 Instalando .NET SDK $DOTNET_VERSION..."
-
   mkdir -p "$INSTALL_DIR"
-
-  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version "$DOTNET_VERSION" --install-dir "$INSTALL_DIR"
-
-  export PATH="$INSTALL_DIR:$PATH"
-
-  echo "✅ .NET SDK $DOTNET_VERSION instalado em $INSTALL_DIR"
+  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel "$DOTNET_VERSION" --install-dir "$INSTALL_DIR"
 }
 
-# ------------------------
-# Verifica se o .NET SDK 8.0 está presente
-# ------------------------
+setup_path() {
+  export PATH="$INSTALL_DIR:$INSTALL_DIR/tools:$PATH"
+}
+
 check_dotnet_sdk() {
-  if command -v dotnet >/dev/null 2>&1; then
-    VERSION=$(dotnet --version)
-    if [[ "$VERSION" == 8.* ]]; then
-      echo "✅ .NET SDK $VERSION já está instalado."
-      return
-    fi
+  if ! command -v dotnet > /dev/null 2>&1; then
+    echo "⚠️ .NET SDK não encontrado. Instalando..."
+    install_dotnet_sdk
+    setup_path
+  else
+    echo "✅ dotnet já está instalado."
+    setup_path
   fi
-
-  echo "⚠️ .NET SDK 8.0 não encontrado. Instalando..."
-  install_dotnet_sdk
 }
 
-# ------------------------
-# Build da aplicação Blazor
-# ------------------------
-build_app() {
-  echo "=============================="
-  echo "🚀 Iniciando build da aplicação Blazor (.NET 8)"
-  echo "📁 Projeto localizado em: $PROJECT_PATH"
-  echo "=============================="
-
+build_and_publish() {
   echo "📦 Restaurando pacotes..."
   dotnet restore "$PROJECT_PATH"
 
-  echo "🔨 Buildando em modo $CONFIGURATION..."
+  echo "🔨 Buildando projeto..."
   dotnet build "$PROJECT_PATH" -c "$CONFIGURATION" --no-restore
 
   echo "📤 Publicando aplicação..."
   dotnet publish "$PROJECT_PATH" -c "$CONFIGURATION" -o "$OUTPUT_DIR" --no-build
 
-  echo "✅ Build e publicação concluídas com sucesso!"
-  echo "📁 Artefatos disponíveis em: $OUTPUT_DIR"
+  echo "✅ Aplicação publicada em: $OUTPUT_DIR"
 }
 
-# ------------------------
-# Execução principal
-# ------------------------
+# Executa as funções
 check_dotnet_sdk
-build_app
+build_and_publish

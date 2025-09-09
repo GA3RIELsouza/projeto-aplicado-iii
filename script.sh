@@ -2,64 +2,39 @@
 
 set -e
 
-PROJECT_PATH="ProjetoAplicadoIII.csproj"
-OUTPUT_DIR="./build-output"
-CONFIGURATION="Release"
+# Define variável HOME para dotnet/NuGet funcionar
+export HOME=/home/ec2-user
 
-install_dotnet_sdk() {
-  echo "🔍 Detectando sistema operacional..."
+# Caminho do projeto
+PROJETO_DIR="/deploy"
+PROJETO_CSPROJ="ProjetoAplicadoIII.csproj"
 
-  if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS_NAME=$ID
-    OS_VERSION=$VERSION_ID
-    echo "Sistema detectado: $OS_NAME $OS_VERSION"
-  else
-    echo "Não foi possível detectar o sistema operacional."
-    exit 1
-  fi
+# Verifica se dotnet está instalado e versão 8.x
+if ! command -v dotnet >/dev/null 2>&1 || ! dotnet --list-sdks | grep -q '^8\.'
+then
+  echo "⚠️ .NET SDK 8 não encontrado. Instalando..."
 
-  if [[ "$OS_NAME" == "amzn" || "$OS_NAME" == "centos" ]]; then
-    echo "Instalando .NET SDK 8 via pacote Microsoft para $OS_NAME..."
+  # Baixa e instala o dotnet SDK 8 localmente em /usr/share/dotnet
+  curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh -o dotnet-install.sh
+  bash ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet --no-path
 
-    sudo yum update -y
+  # Adiciona dotnet no PATH para sessão atual
+  export PATH=/usr/share/dotnet:$PATH
 
-    sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+  echo ".NET SDK 8 instalado."
+else
+  echo "dotnet já está instalado: $(dotnet --version)"
+fi
 
-    sudo yum install -y dotnet-sdk-8.0
+cd "$PROJETO_DIR"
 
-    echo "Instalação do .NET SDK concluída."
-  else
-    echo "Sistema operacional não suportado por esse script automático."
-    exit 1
-  fi
-}
+echo "Restaurando pacotes..."
+dotnet restore "$PROJETO_CSPROJ"
 
-check_dotnet() {
-  if ! command -v dotnet > /dev/null 2>&1; then
-    echo ".NET SDK não encontrado. Instalando..."
-    install_dotnet_sdk
-  else
-    echo "dotnet já está instalado: $(dotnet --version)"
-  fi
-}
+echo "Buildando projeto..."
+dotnet build "$PROJETO_CSPROJ" -c Release --no-restore
 
-build_and_publish() {
-  echo "Restaurando pacotes..."
-  dotnet restore "$PROJECT_PATH"
+echo "Publicando projeto..."
+dotnet publish "$PROJETO_CSPROJ" -c Release -o "$PROJETO_DIR/publish" --no-build
 
-  echo "Buildando projeto..."
-  dotnet build "$PROJECT_PATH" -c "$CONFIGURATION" --no-restore
-
-  echo "Publicando aplicação..."
-  dotnet publish "$PROJECT_PATH" -c "$CONFIGURATION" -o "$OUTPUT_DIR" --no-build
-
-  echo "✅ Aplicação publicada em $OUTPUT_DIR"
-}
-
-main() {
-  check_dotnet
-  build_and_publish
-}
-
-main
+echo "Aplicação publicada em $PROJETO_DIR/publish"

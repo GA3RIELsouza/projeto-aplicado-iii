@@ -6,7 +6,7 @@ set -e
 export HOME=/home/ec2-user
 
 # Caminho do projeto
-PROJETO_DIR="/deploy"
+PROJETO_DIR="."
 PROJETO_CSPROJ="ProjetoAplicadoIII.csproj"
 
 # Verifica se dotnet está instalado e versão 8.x
@@ -25,8 +25,6 @@ then
 else
   echo "dotnet já está instalado: $(dotnet --version)"
 fi
-
-cd "$PROJETO_DIR"
 
 echo "Restaurando pacotes..."
 dotnet restore "$PROJETO_CSPROJ"

@@ -1,17 +1,11 @@
 ﻿#!/bin/bash
 
-# ========================
-# Script de Build - Blazor .NET 8 com instalação do SDK
-# Projeto localizado em /deploy
-# ========================
+set -e
 
-set -e  # Encerra se houver erro
-
-# Caminho do projeto
-PROJECT_PATH="./"
+PROJECT_PATH="./deploy"
 OUTPUT_DIR="./build-output"
 CONFIGURATION="Release"
-DOTNET_VERSION="8.0"
+DOTNET_VERSION="8.0.302"  # Versão válida e existente
 INSTALL_DIR="$HOME/dotnet"
 
 # ------------------------

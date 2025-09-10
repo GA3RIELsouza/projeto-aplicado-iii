@@ -1,0 +1,101 @@
+﻿@rendermode InteractiveServer
+
+@using ProjetoAplicadoIII.Entities
+@using ProjetoAplicadoIII.Infrastructure.Interfaces
+@using ProjetoAplicadoIII.Infrastructure.Context
+
+@inject SqliteDbContext Db
+@inject IUserRepository UserRepo
+
+@if (Users.Count == 0)
+{
+	<h3>Nenhum usuário cadastrado.</h3>
+}
+else
+{
+	<h3>Usuários:</h3>
+	<table>
+		<thead>
+			<tr>
+				<td>
+					Nome
+				</td>
+				<td>
+					E-mail
+				</td>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var user in Users)
+			{
+				<tr>
+					<td>
+						@user.Name
+					</td>
+					<td>
+						@user.Email
+					</td>
+					<td>
+						<button @onclick="() => RemoveUserAsync(user.Id)" disabled="@(DeletingId.HasValue)">
+							@(DeletingId == user.Id ? "Excluindo..." : "Excluir")
+						</button>
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+<button @onclick="() => ReloadAsync()">
+	Recarregar
+</button>
+
+@code {
+	List<User> Users = [];
+	long? DeletingId;
+
+	protected override async Task OnInitializedAsync()
+	{
+		Users = await UserRepo.ListUsersAsync();
+	}
+
+	public async Task ReloadAsync()
+	{
+		await LoadAsync();
+		StateHasChanged();
+	}
+
+	private async Task LoadAsync()
+	{
+		Users = await UserRepo.ListUsersAsync();
+	}
+
+	private async Task RemoveUserAsync(long userId)
+	{
+		if (DeletingId is not null)
+		{
+			return;
+		}
+
+		DeletingId = userId;
+
+		var user = Users.FirstOrDefault(u => u.Id == userId);
+
+		if (user is null)
+		{
+			return;
+		}
+
+		try
+		{
+			await Db.RunInTransactionAsync(() => UserRepo.Remove(user));
+			Users.Remove(user);
+		}
+		finally
+		{
+			DeletingId = null;
+		}
+
+		StateHasChanged();
+	}
+}

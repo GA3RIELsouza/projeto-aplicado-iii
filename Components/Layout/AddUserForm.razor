@@ -42,9 +42,9 @@
 <Modal @ref="ErrorModalRef" Title="Erro!" />
 
 @code {
-    private UserModel? UserModel { get; set; }
-    private Modal? SuccessModalRef;
-    private Modal? ErrorModalRef;
+    UserModel? UserModel;
+    Modal? SuccessModalRef;
+    Modal? ErrorModalRef;
 
     protected override void OnInitialized() => UserModel ??= new();
 

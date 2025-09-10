@@ -15,9 +15,14 @@ namespace ProjetoAplicadoIII.Infrastructure.Context
 
         public DbSet<User> Users => Set<User>();
 
+        private static Func<Task> ActionToAsyncFuncHelper(Action action) => () => { action(); return Task.CompletedTask; };
+
+        public async Task RunInTransactionAsync(Action operations) => await RunInTransactionAsync<bool>(ActionToAsyncFuncHelper(operations), null);
+        public async Task RunInTransactionAsync(Action operations, Action ifFails) => await RunInTransactionAsync(ActionToAsyncFuncHelper(operations), ifFails);
+        public async Task RunInTransactionAsync<T>(Action operations, Func<T>? ifFails) => await RunInTransactionAsync(ActionToAsyncFuncHelper(operations), ifFails);
+
         public async Task RunInTransactionAsync(Func<Task> operations) => await RunInTransactionAsync<bool>(operations, null);
         public async Task RunInTransactionAsync(Func<Task> operations, Action ifFails) => await RunInTransactionAsync(operations, () => { ifFails(); return Task.CompletedTask; });
-
         public async Task RunInTransactionAsync<T>(Func<Task> operations, Func<T>? ifFails)
         {
             if (Database.CurrentTransaction is not null)
@@ -26,7 +31,6 @@ namespace ProjetoAplicadoIII.Infrastructure.Context
                 return;
             }
 
-            await Database.OpenConnectionAsync();
             await using var transaction = await Database.BeginTransactionAsync();
 
             try
@@ -52,10 +56,6 @@ namespace ProjetoAplicadoIII.Infrastructure.Context
                         break;
                 }
                 ExceptionDispatchInfo.Capture(ex).Throw();
-            }
-            finally
-            {
-                await Database.CloseConnectionAsync();
             }
         }
     }

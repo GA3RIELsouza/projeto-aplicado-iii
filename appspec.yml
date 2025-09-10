@@ -7,7 +7,7 @@ files:
   - source: /
     destination: /home/ec2-user/deploy
 
-# Ajusta permissıes para os scripts
+# Ajusta permiss√µes para os scripts
 permissions:
   - object: /home/ec2-user/deploy/scripts
     owner: ec2-user

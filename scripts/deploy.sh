@@ -14,10 +14,10 @@ export PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:${PATH}"
 
 echo "==> [deploy] Iniciando publish no ${APP_DIR}..."
 
-# Encontra o .csproj (assume 1 projeto principal no diretÛrio)
+# Encontra o .csproj (assume 1 projeto principal no diret√≥rio)
 PROJECT_FILE="$(find "${APP_DIR}" -maxdepth 2 -name "*.csproj" | head -n 1 || true)"
 if [ -z "${PROJECT_FILE}" ]; then
-  echo "Arquivo .csproj n„o encontrado em ${APP_DIR}."
+  echo "Arquivo .csproj n√£o encontrado em ${APP_DIR}."
   exit 1
 fi
 APP_DLL="$(basename "${PROJECT_FILE}" .csproj).dll"
@@ -33,10 +33,10 @@ echo "==> Restaurando pacotes..."
 echo "==> Publicando em modo Release..."
 "${DOTNET_DIR}/dotnet" publish "${PROJECT_FILE}" -c Release -o "${PUBLISH_DIR}" --nologo
 
-# Ajusta permissıes do publish
+# Ajusta permiss√µes do publish
 chown -R "${APP_USER}:${APP_USER}" "${PUBLISH_DIR}"
 
-echo "==> Configurando serviÁo systemd (${SERVICE_NAME}.service) para rodar na porta ${PORT}..."
+echo "==> Configurando servi√ßo systemd (${SERVICE_NAME}.service) para rodar na porta ${PORT}..."
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 # Cria/atualiza o unit file
@@ -48,31 +48,31 @@ After=network.target
 [Service]
 User=${APP_USER}
 WorkingDirectory=${PUBLISH_DIR}
-# Vari·veis de ambiente para execuÁ„o
+# Vari√°veis de ambiente para execu√ß√£o
 Environment=DOTNET_ROOT=${DOTNET_DIR}
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://0.0.0.0:${PORT}
-# Garante que o bin·rio dotnet do usu·rio ser· usado
+# Garante que o bin√°rio dotnet do usu√°rio ser√° usado
 ExecStart=${DOTNET_DIR}/dotnet ${PUBLISH_DIR}/${APP_DLL}
 Restart=always
 RestartSec=5
 KillSignal=SIGINT
 SyslogIdentifier=${SERVICE_NAME}
-# Evita problemas de criaÁ„o de arquivos/logs
+# Evita problemas de cria√ß√£o de arquivos/logs
 UMask=0022
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Aplica e (re)inicia o serviÁo
+# Aplica e (re)inicia o servi√ßo
 sudo systemctl daemon-reload
 sudo systemctl enable "${SERVICE_NAME}.service"
 sudo systemctl restart "${SERVICE_NAME}.service"
 
-echo "==> Aguardando o serviÁo iniciar..."
+echo "==> Aguardando o servi√ßo iniciar..."
 sleep 3
 sudo systemctl --no-pager --full status "${SERVICE_NAME}.service" || true
 
-echo "==> [deploy] Publish e (re)start do serviÁo concluÌdos."
+echo "==> [deploy] Publish e (re)start do servi√ßo conclu√≠dos."
 echo "Artefatos em: ${PUBLISH_DIR}"

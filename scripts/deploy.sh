@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# (opcional) log persistente para debug pós-deploy
+# (opcional) log persistente para depuração
 LOGFILE="/home/ec2-user/deploy/.server_state/last_deploy.log"
 mkdir -p /home/ec2-user/deploy/.server_state
 exec > >(tee -a "$LOGFILE") 2>&1
@@ -65,6 +65,7 @@ export DOTNET_ROOT="$(dirname "${DOTNET_BIN}")"
 export PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:${HOME_DIR}/.dotnet/tools:${PATH}"
 
 # === Dependências do host ===
+# sqlite3 CLI (para aplicar o script idempotente)
 if ! command -v sqlite3 >/dev/null 2>&1; then
   echo "==> Instalando sqlite3..."
   if command -v dnf >/dev/null 2>&1; then
@@ -111,10 +112,12 @@ echo "==> dotnet --info (resumo)"
 EF_ENV="HOME=${HOME_DIR} DOTNET_CLI_HOME=${HOME_DIR} NUGET_PACKAGES=${NUGET_PACKAGES} PATH=${PATH}"
 sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" --info | sed -n '1,25p' || true
 
-# === dotnet-ef (update OU install, robusto) ===
-echo "==> Garantindo dotnet-ef (global) para ${APP_USER}..."
-sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool update --global dotnet-ef \
-  || sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool install --global dotnet-ef
+# === dotnet-ef (fixado em 8.x para compatibilidade com SDK 8) ===
+EF_VER="8.*"
+echo "==> Garantindo dotnet-ef ${EF_VER} (global) para ${APP_USER}..."
+sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool update --global dotnet-ef --version "${EF_VER}" \
+  || { sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool uninstall --global dotnet-ef || true; \
+       sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool install --global dotnet-ef --version "${EF_VER}"; }
 # confere
 sudo -H -u "${APP_USER}" env ${EF_ENV} bash -lc 'command -v dotnet-ef && dotnet-ef --version'
 

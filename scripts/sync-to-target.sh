@@ -7,16 +7,18 @@ TARGET="/home/${APP_USER}/deploy"
 echo "==> [sync] Copiando artefato para ${TARGET} ..."
 mkdir -p "${TARGET}"
 
-# Preserva .server_state/ (migrations/estado) e TAMBÉM a pasta publish/ inteira (inclui sqlite.db)
+# Importante:
+# - '/publish/' e '/.server_state/' ANCORADOS ao topo do artefato
+# - Ignora 'bin/' e 'obj/' (evita "cannot delete non-empty directory")
 rsync -a --delete \
-  --exclude '.server_state/' \
-  --exclude 'publish/' \
+  --exclude='/.server_state/' \
+  --exclude='/publish/' \
+  --exclude='/bin/' \
+  --exclude='/obj/' \
   ./ "${TARGET}/"
 
-# Garante que os scripts são executáveis
+# Permissões e execução dos scripts
 chmod +x "${TARGET}/scripts/"*.sh || true
-
-# Ownership para o ec2-user
 chown -R "${APP_USER}:${APP_USER}" "${TARGET}"
 
 echo "==> [sync] OK."

@@ -32,14 +32,14 @@ export NUGET_PACKAGES="${HOME_DIR}/.nuget/packages"
 install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" \
   "${HOME_DIR}/.nuget" "${HOME_DIR}/.nuget/NuGet" "${NUGET_PACKAGES}"
 
-# Garante árvore de ferramentas dotnet do ec2-user (evita "Access denied" no dotnet-ef)
+# Ferramentas do dotnet (evita "Access denied" no dotnet-ef)
 install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" \
   "${HOME_DIR}/.dotnet" "${HOME_DIR}/.dotnet/tools"
 
 chown -R "${APP_USER}:${APP_USER}" "${HOME_DIR}/.nuget" "${HOME_DIR}/.dotnet"
 chmod -R u+rwX,go+rX "${HOME_DIR}/.nuget" "${HOME_DIR}/.dotnet"
 
-# Cria um NuGet.Config mínimo se não existir
+# NuGet.Config mínimo, se faltar
 if [ ! -f "${HOME_DIR}/.nuget/NuGet/NuGet.Config" ]; then
   cat > "${HOME_DIR}/.nuget/NuGet/NuGet.Config" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -65,7 +65,6 @@ export DOTNET_ROOT="$(dirname "${DOTNET_BIN}")"
 export PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:${HOME_DIR}/.dotnet/tools:${PATH}"
 
 # === Dependências do host ===
-# sqlite3 CLI (para aplicar o script idempotente)
 if ! command -v sqlite3 >/dev/null 2>&1; then
   echo "==> Instalando sqlite3..."
   if command -v dnf >/dev/null 2>&1; then
@@ -109,20 +108,15 @@ rm -rf "${PUBLISH_DIR}"
 install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${PUBLISH_DIR}"
 
 echo "==> dotnet --info (resumo)"
-sudo -H -u "${APP_USER}" env \
-  HOME="${HOME_DIR}" DOTNET_CLI_HOME="${HOME_DIR}" NUGET_PACKAGES="${NUGET_PACKAGES}" PATH="${PATH}" \
-  "${DOTNET_BIN}" --info | sed -n '1,25p' || true
-
-# === dotnet-ef para o ec2-user (global) ===
 EF_ENV="HOME=${HOME_DIR} DOTNET_CLI_HOME=${HOME_DIR} NUGET_PACKAGES=${NUGET_PACKAGES} PATH=${PATH}"
-if ! sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool list -g | grep -q '^dotnet-ef'; then
-  echo "==> Instalando dotnet-ef (global) para ${APP_USER}..."
-  sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool install --global dotnet-ef
-else
-  echo "==> Atualizando dotnet-ef (global) para ${APP_USER}..."
-  sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool update --global dotnet-ef || true
-fi
-sudo -H -u "${APP_USER}" env ${EF_ENV} bash -lc 'command -v dotnet-ef && dotnet-ef --version || true'
+sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" --info | sed -n '1,25p' || true
+
+# === dotnet-ef (update OU install, robusto) ===
+echo "==> Garantindo dotnet-ef (global) para ${APP_USER}..."
+sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool update --global dotnet-ef \
+  || sudo -H -u "${APP_USER}" env ${EF_ENV} "${DOTNET_BIN}" tool install --global dotnet-ef
+# confere
+sudo -H -u "${APP_USER}" env ${EF_ENV} bash -lc 'command -v dotnet-ef && dotnet-ef --version'
 
 # === (1) Gerar migration do estado atual (se houver mudanças) ===
 MIG_NAME="DeployAuto_$(date +%Y%m%d_%H%M%S)"

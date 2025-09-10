@@ -1,4 +1,7 @@
 version: 0.0
+files:
+  - source: /
+    destination: /home/ec2-user/deploy
 hooks:
   BeforeInstall:
     - location: scripts/pre-deploy.sh

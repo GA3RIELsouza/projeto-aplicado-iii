@@ -7,9 +7,11 @@ TARGET="/home/${APP_USER}/deploy"
 echo "==> [sync] Copiando artefato para ${TARGET} ..."
 mkdir -p "${TARGET}"
 
-# estamos rodando a partir da raiz do artefato extraído em /tmp/codepipeline/<exec>/
-# copia tudo, preservando estrutura, exceto a própria pasta temp do pipeline.
-rsync -a --delete ./ "${TARGET}/"
+# Preserva .server_state/ (migrations do servidor) e o sqlite.db publicado
+rsync -a --delete \
+  --exclude '.server_state/' \
+  --exclude 'publish/sqlite.db' \
+  ./ "${TARGET}/"
 
 # garante que os scripts são executáveis
 chmod +x "${TARGET}/scripts/"*.sh || true

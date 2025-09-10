@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# (opcional) log para debug persistente
+LOGFILE="/home/ec2-user/deploy/.server_state/last_deploy.log"
+mkdir -p /home/ec2-user/deploy/.server_state
+exec > >(tee -a "$LOGFILE") 2>&1
+
 # === Configuração básica ===
 APP_USER="ec2-user"
 HOME_DIR="/home/${APP_USER}"
@@ -15,7 +20,7 @@ SERVER_STATE="${APP_DIR}/.server_state"
 SERVER_DB="${SERVER_STATE}/sqlite.db"
 SERVER_MIGRATIONS="${SERVER_STATE}/Migrations"
 SERVER_SQL="${SERVER_STATE}/ef_migrate.sql"
-install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${SERVER_STATE}"
+install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${SERVER_STATE}" "${SERVER_MIGRATIONS}"
 
 # === Ambiente para NuGet/dotnet (permanente) ===
 export HOME="${HOME_DIR}"
@@ -50,7 +55,6 @@ export DOTNET_ROOT="$(dirname "${DOTNET_BIN}")"
 export PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:${HOME_DIR}/.dotnet/tools:${PATH}"
 
 # === Dependências do host ===
-# sqlite3 CLI (para aplicar o script idempotente)
 if ! command -v sqlite3 >/dev/null 2>&1; then
   echo "==> Instalando sqlite3..."
   if command -v dnf >/dev/null 2>&1; then
@@ -79,6 +83,9 @@ fi
 APP_DLL="$(basename "${PROJECT_FILE}" .csproj).dll"
 echo "==> Projeto: ${PROJECT_FILE}"
 
+# Entrar no diretório do projeto garante que caminhos do EF (ex.: -o) são válidos/relativos ao projeto
+cd "${APP_DIR}"
+
 # === Preserva o sqlite.db antes de limpar o publish ===
 LIVE_DB="${PUBLISH_DIR}/sqlite.db"
 if [ -f "${LIVE_DB}" ]; then
@@ -95,21 +102,21 @@ sudo -H -u "${APP_USER}" env \
   HOME="${HOME_DIR}" DOTNET_CLI_HOME="${HOME_DIR}" NUGET_PACKAGES="${NUGET_PACKAGES}" PATH="${PATH}" \
   "${DOTNET_BIN}" --info | sed -n '1,25p' || true
 
-# === Garante dotnet-ef instalado para o ec2-user ===
+# === dotnet-ef para o ec2-user ===
 if ! sudo -H -u "${APP_USER}" env PATH="${PATH}" "${DOTNET_BIN}" tool list -g | grep -q 'dotnet-ef'; then
   echo "==> Instalando dotnet-ef (global) para ${APP_USER}..."
   sudo -H -u "${APP_USER}" env PATH="${PATH}" "${DOTNET_BIN}" tool install --global dotnet-ef
 fi
 
-# === Gera/atualiza migrations no servidor (persistem em .server_state) ===
-install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${SERVER_MIGRATIONS}"
+# === (1) Gerar migration do estado atual (se houver mudanças) ===
 MIG_NAME="DeployAuto_$(date +%Y%m%d_%H%M%S)"
-echo "==> dotnet ef migrations add ${MIG_NAME} (saída em ${SERVER_MIGRATIONS})"
-# Se não houver mudanças, o EF apenas informa e retorna 0
+echo "==> dotnet ef migrations add ${MIG_NAME} (saída em .server_state/Migrations)"
+# Observação: -o precisa ser relativo ao projeto; como já estamos em APP_DIR, funciona.
 sudo -H -u "${APP_USER}" env \
   HOME="${HOME_DIR}" DOTNET_CLI_HOME="${HOME_DIR}" NUGET_PACKAGES="${NUGET_PACKAGES}" PATH="${PATH}" \
   "${DOTNET_BIN}" ef migrations add "${MIG_NAME}" \
-    --project "${APP_DIR}" --startup-project "${APP_DIR}" -o ".server_state/Migrations" || true
+    --project "${PROJECT_FILE}" --startup-project "${PROJECT_FILE}" \
+    -o ".server_state/Migrations" || true
 
 echo "==> dotnet restore..."
 sudo -H -u "${APP_USER}" env \
@@ -121,25 +128,28 @@ sudo -H -u "${APP_USER}" env \
   HOME="${HOME_DIR}" DOTNET_CLI_HOME="${HOME_DIR}" NUGET_PACKAGES="${NUGET_PACKAGES}" PATH="${PATH}" \
   "${DOTNET_BIN}" publish "${PROJECT_FILE}" -c Release -o "${PUBLISH_DIR}" --nologo
 
-# === Restaura o sqlite.db preservado para a pasta publicada ===
+# === (2) Restaurar o sqlite.db preservado ===
 if [ -f "${SERVER_DB}" ]; then
   echo "==> Restaurando banco: movendo ${SERVER_DB} -> ${LIVE_DB}"
   mv -f "${SERVER_DB}" "${LIVE_DB}"
   chown "${APP_USER}:${APP_USER}" "${LIVE_DB}"
 fi
 
-# === Gera script idempotente e aplica no sqlite.db publicado ===
+# === (3) Gerar script idempotente e aplicar no sqlite.db ===
 echo "==> dotnet ef migrations script --idempotent"
 sudo -H -u "${APP_USER}" env \
   HOME="${HOME_DIR}" DOTNET_CLI_HOME="${HOME_DIR}" NUGET_PACKAGES="${NUGET_PACKAGES}" PATH="${PATH}" \
   "${DOTNET_BIN}" ef migrations script --idempotent \
-    --project "${APP_DIR}" --startup-project "${APP_DIR}" -o "${SERVER_SQL}"
+    --project "${PROJECT_FILE}" --startup-project "${PROJECT_FILE}" -o "${SERVER_SQL}" || true
 
-# Se o DB ainda não existir, será criado ao aplicar o script
-echo "==> Aplicando migrations no ${LIVE_DB} (sqlite3)"
-sqlite3 "${LIVE_DB}" < "${SERVER_SQL}"
+if [ -s "${SERVER_SQL}" ]; then
+  echo "==> Aplicando migrations no ${LIVE_DB} (sqlite3)"
+  sqlite3 "${LIVE_DB}" < "${SERVER_SQL}"
+else
+  echo "==> Nenhum script de migração gerado (nada para aplicar)."
+fi
 
-# Garante ownership correto do publish
+# Ownership do publish
 chown -R "${APP_USER}:${APP_USER}" "${PUBLISH_DIR}"
 
 echo "==> Escrevendo unit ${SERVICE_FILE}..."

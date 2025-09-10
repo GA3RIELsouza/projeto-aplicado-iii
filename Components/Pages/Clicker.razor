@@ -1,0 +1,46 @@
+﻿@using ProjetoAplicadoIII.Services
+
+@inject ClickerState State
+
+@page "/clicker"
+@rendermode InteractiveServer
+
+<PageTitle>Clicker</PageTitle>
+
+<h1>Clicker</h1>
+
+@if (State.IsInGame)
+{
+    <h1>Está em jogo.</h1>
+    <button @onclick=State.ToggleInGame>Encerrar</button>
+}
+else
+{
+    <h1>Não está em jogo.</h1>
+    <button @onclick=State.ToggleInGame>Iniciar</button>
+}
+
+<p role="status">Current count: @currentCount</p>
+<p>Teste: @teste</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+@code {
+    private int currentCount = 0;
+
+    private int? teste;
+
+    protected override void OnInitialized()
+    {
+        if (State.IsInGame)
+        {
+            
+        }
+    }
+
+    private void IncrementCount()
+    {
+        teste = State.Players.Length;
+        currentCount++;
+    }
+}

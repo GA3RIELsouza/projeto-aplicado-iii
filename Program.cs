@@ -3,6 +3,7 @@ using ProjetoAplicadoIII.Components;
 using ProjetoAplicadoIII.Infrastructure.Context;
 using ProjetoAplicadoIII.Infrastructure.Interfaces;
 using ProjetoAplicadoIII.Infrastructure.Repositories;
+using ProjetoAplicadoIII.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,8 @@ builder.Services.AddDbContext<SqliteDbContext>(options =>
         sqliteOptions.CommandTimeout(30);
     });
 });
+
+builder.Services.RegisterServices();
 
 #region Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();

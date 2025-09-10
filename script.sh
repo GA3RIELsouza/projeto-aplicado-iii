@@ -1,38 +1,51 @@
 #!/bin/bash
 
-set -e
+# Diretório atual onde o script está rodando
+CURRENT_DIR=$(pwd)
 
-# Define variável HOME para dotnet/NuGet funcionar
-export HOME=/home/ec2-user
+echo "Garantindo permissões para ec2-user na pasta $CURRENT_DIR"
 
-# Caminho do projeto
-PROJETO_DIR="."
-PROJETO_CSPROJ="ProjetoAplicadoIII.csproj"
+# Ajusta dono e grupo para ec2-user na pasta atual (recursivamente)
+sudo chown -R ec2-user:ec2-user "$CURRENT_DIR"
 
-# Verifica se dotnet está instalado e versão 8.x
-if ! command -v dotnet >/dev/null 2>&1 || ! dotnet --list-sdks | grep -q '^8\.'
-then
-  echo "⚠️ .NET SDK 8 não encontrado. Instalando..."
+# Dá permissão total na pasta atual (recursivamente)
+sudo chmod -R 777 "$CURRENT_DIR"
 
-  # Baixa e instala o dotnet SDK 8 localmente em /usr/share/dotnet
-  curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh -o dotnet-install.sh
-  bash ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet --no-path
+echo "Permissões ajustadas."
 
-  # Adiciona dotnet no PATH para sessão atual
-  export PATH=/usr/share/dotnet:$PATH
+# Atualiza o sistema
+sudo yum update -y
 
-  echo ".NET SDK 8 instalado."
-else
-  echo "dotnet já está instalado: $(dotnet --version)"
-fi
+# Instala pacotes necessários
+sudo yum install -y wget tar
 
-echo "Restaurando pacotes..."
-dotnet restore "$PROJETO_CSPROJ"
+# Variável para versão do .NET SDK
+DOTNET_SDK_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.414/dotnet-sdk-8.0.414-linux-x64.tar.gz"
 
-echo "Buildando projeto..."
-dotnet build "$PROJETO_CSPROJ" -c Release --no-restore
+# Diretório para instalação do .NET
+INSTALL_DIR=$HOME/dotnet
 
-echo "Publicando projeto..."
-dotnet publish "$PROJETO_CSPROJ" -c Release -o "$PROJETO_DIR/publish" --no-build
+# Cria diretório para instalação se não existir
+mkdir -p $INSTALL_DIR
 
-echo "Aplicação publicada em $PROJETO_DIR/publish"
+# Baixa o SDK do .NET
+wget -O dotnet-sdk.tar.gz $DOTNET_SDK_URL
+
+# Extrai o SDK no diretório de instalação
+tar -zxf dotnet-sdk.tar.gz -C $INSTALL_DIR
+
+# Remove o arquivo baixado
+rm dotnet-sdk.tar.gz
+
+# Exporta as variáveis para o PATH temporariamente para essa sessão
+export DOTNET_ROOT=$INSTALL_DIR
+export PATH=$INSTALL_DIR:$PATH
+
+# Publica o projeto na pasta ./publish
+dotnet publish ProjetoAplicadoIII.csproj -c Release -o ./publish
+
+echo "Publicação concluída em ./publish"
+
+# Opcional: Para tornar as variáveis permanentes, pode adicionar as linhas abaixo no ~/.bashrc ou ~/.bash_profile
+# echo "export DOTNET_ROOT=$INSTALL_DIR" >> ~/.bashrc
+# echo "export PATH=\$DOTNET_ROOT:\$PATH" >> ~/.bashrc

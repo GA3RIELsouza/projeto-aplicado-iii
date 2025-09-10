@@ -7,18 +7,14 @@ TARGET="/home/${APP_USER}/deploy"
 echo "==> [sync] Copiando artefato para ${TARGET} ..."
 mkdir -p "${TARGET}"
 
-# Importante:
-# - '/publish/' e '/.server_state/' ANCORADOS ao topo do artefato
-# - Ignora 'bin/' e 'obj/' (evita "cannot delete non-empty directory")
-rsync -a --delete \
-  --exclude='/.server_state/' \
-  --exclude='/publish/' \
-  --exclude='/bin/' \
-  --exclude='/obj/' \
-  ./ "${TARGET}/"
+# estamos rodando a partir da raiz do artefato extraído em /tmp/codepipeline/<exec>/
+# copia tudo, preservando estrutura, exceto a própria pasta temp do pipeline.
+rsync -a --delete ./ "${TARGET}/"
 
-# Permissões e execução dos scripts
+# garante que os scripts são executáveis
 chmod +x "${TARGET}/scripts/"*.sh || true
+
+# ownership para o ec2-user (código e scripts)
 chown -R "${APP_USER}:${APP_USER}" "${TARGET}"
 
 echo "==> [sync] OK."

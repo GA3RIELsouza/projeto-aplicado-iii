@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 # Porta padrão (ajuste conforme sua infra: 80/5000/etc.)
-ENV ASPNETCORE_URLS=http://+:8080 \
+ENV ASPNETCORE_URLS=http://+:7234 \
     ASPNETCORE_ENVIRONMENT=Production
 
 # Se preferir não-root, descomente o bloco abaixo (pode exigir utilitários no base image)
@@ -11,7 +11,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 #  && chown -R appuser:appuser /app
 # USER appuser
 
-EXPOSE 8080
+EXPOSE 7234
 
 # ===== BUILD/PUBLISH =====
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build

@@ -4,9 +4,9 @@ using ProjetoAplicadoIII.Hubs;
 
 namespace ProjetoAplicadoIII.Services
 {
-    public class ClickerState(ClickerHub hub)
+    public class ClickerState(IHubContext<ClickerHub> hub)
     {
-        private readonly ClickerHub _hub = hub;
+        private readonly IHubContext<ClickerHub> _hub = hub;
         private readonly object _lock = new();
 
         public bool IsInGame { get; private set; } = false;

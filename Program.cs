@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProjetoAplicadoIII.Components;
+using ProjetoAplicadoIII.Hubs;
 using ProjetoAplicadoIII.Infrastructure.Context;
 using ProjetoAplicadoIII.Infrastructure.Interfaces;
 using ProjetoAplicadoIII.Infrastructure.Repositories;
@@ -40,5 +41,7 @@ app.UseHttpsRedirection()
 app.UseStaticFiles();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.RegisterHubs();
 
 app.Run();

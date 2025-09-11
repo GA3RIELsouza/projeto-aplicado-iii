@@ -37,4 +37,4 @@ FROM runtime AS final
 WORKDIR /app
 COPY --from=build /app/publish ./
 
-ENTRYPOINT ["dotnet", "ProjetoAplicadoIII.dll"]
+ENTRYPOINT ["dotnet", "app.dll"]

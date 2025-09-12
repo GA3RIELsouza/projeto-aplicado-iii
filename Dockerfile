@@ -29,12 +29,11 @@ COPY . .
 RUN dotnet restore "$PROJECT" \
  && dotnet publish "$PROJECT" -c $BUILD_CONFIGURATION -o /app/publish \
     -p:UseAppHost=false \
-    -p:PublishReadyToRun=true \
-    -p:AssemblyName=app
+    -p:PublishReadyToRun=true
 
 # ===== FINAL =====
 FROM runtime AS final
 WORKDIR /app
 COPY --from=build /app/publish ./
 
-ENTRYPOINT ["dotnet", "app.dll"]
+ENTRYPOINT ["dotnet", "ProjetoAplicadoIII.dll"]
